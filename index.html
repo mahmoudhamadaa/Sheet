@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>نظام إدارة الكافيه</title>
+    
+    <style>
+   
+    * {
+        box-sizing: border-box;
+        font-family: 'Roboto', Arial, sans-serif;
+    }
+    body {
+        margin: 0;
+        padding: 20px;
+        background: linear-gradient(to right, #f0f2f5, #d8dfe7);
+    }
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    .tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        justify-content: center;
+    }
+    .tab {
+        padding: 12px 24px;
+        background: #595959;
+        border: 1px solid #ddd;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 18px;
+        transition: background 0.3s ease;
+    }
+    .tab.active {
+        background: #1a73e8;
+        color: rgb(255, 255, 255);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    .tab:hover {
+        background: #ffffff;
+        color: #000000;
+    }
+    .tab-content {
+        display: none;
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-top: 20px;
+    }
+    .tab-content.active {
+        display: block;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: #333;
+    }
+    input, select {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        margin-bottom: 15px;
+        font-size: 16px;
+        transition: border-color 0.3s ease;
+    }
+    input:focus, select:focus {
+        border-color: #1a73e8;
+    }
+    button {
+        background: #1a73e8;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background 0.3s ease;
+    }
+    button:hover {
+        background: #1557b0;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 30px;
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 14px;
+        text-align: right;
+    }
+    th {
+        background: #f5f5f5;
+        font-size: 18px;
+    }
+    td {
+        font-size: 16px;
+    }
+    tr:nth-child(even) {
+        background: #f9f9f9;
+    }
+    .summary {
+        margin-top: 30px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    .summary p {
+        font-size: 18px;
+        color: #333;
+    }
+</style>
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('sales')">المبيعات</button>
+            <button class="tab" onclick="showTab('report')">التقارير</button>
+        </div>
+
+        <!-- المبيعات -->
+        <div id="sales" class="tab-content active">
+            <h2>تسجيل مبيعات جديدة</h2>
+            <div class="form-group">
+             
+                    <label>تاريخ المبيعات:</label>
+                    <input type="date" id="saleDate" value="${new Date().toISOString().split('T')[0]}">
+                
+                <label>الصنف:</label>
+                <select id="saleItem"></select>
+            </div>
+            <div class="form-group">
+                <label>الكمية:</label>
+                <input type="number" id="saleQuantity" min="1">
+            </div>
+            <button onclick="addSale()">إضافة</button>
+            <button onclick="saveDailySales()">حفظ الفاتورة</button>
+
+            <h3>مبيعات اليوم</h3>
+            <table id="salesTable">
+                <thead>
+                    <tr>
+                        <th>الصنف</th>
+                        <th>الكمية</th>
+                        <th>السعر</th>
+                        <th>الإجمالي</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- التقارير -->
+        <div id="report" class="tab-content">
+            <h2>التقارير</h2>
+            <div class="form-group">
+                    <label>اختر تاريخ التقرير:</label>
+                    <input type="date" id="reportDate" onchange="generateReport()">
+                
+                <label>اختر نوع التقرير:</label>
+                <select id="reportType" onchange="generateReport()">
+                    <option value="daily">يومي</option>
+                    <option value="weekly">أسبوعي</option>
+                    <option value="monthly">شهري</option>
+                    <option value="yearly">سنوي</option>
+
+                </select>
+            </div>
+            <div id="reportContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let items = JSON.parse(localStorage.getItem('cafeItems')) || [
+            
+    { id: 1, name: 'شاي', price: 5 },
+    { id: 2, name: 'قهوة', price: 10 },
+    { id: 3, name: 'نسكافيه', price: 12 },
+    { id: 4, name: 'كابتشينو', price: 15 },
+    { id: 5, name: 'لاتيه', price: 18 },
+    { id: 6, name: 'موكا', price: 20 },
+    { id: 7, name: 'اسبريسو', price: 8 },
+    { id: 8, name: 'شوكولاتة ساخنة', price: 14 },
+    { id: 9, name: 'عصير برتقال', price: 10 },
+    { id: 10, name: 'عصير ليمون', price: 12 }
+
+
+            
+        ];
+        let salesData = JSON.parse(localStorage.getItem('salesData')) || {};
+        let currentDate = new Date().toISOString().split('T')[0];
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        function updateItemsList() {
+            const select = document.getElementById('saleItem');
+            select.innerHTML = '';
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = `${item.name} - ${item.price} جنيه`;
+                select.appendChild(option);
+            });
+        }
+
+        function addSale() {
+    const saleDate = document.getElementById('saleDate').value;
+    const itemId = parseInt(document.getElementById('saleItem').value);
+    const quantity = parseInt(document.getElementById('saleQuantity').value);
+
+    if (!saleDate) {
+        alert('يرجى تحديد تاريخ المبيعات');
+        return;
+    }
+    if (!quantity || quantity < 1) {
+        alert('برجاء إدخال كمية صحيحة');
+        return;
+    }
+
+    const item = items.find(i => i.id === itemId);
+    const sale = {
+        itemId,
+        itemName: item.name,
+        quantity,
+        price: item.price,
+        total: item.price * quantity
+    };
+
+    if (!salesData[saleDate]) {
+        salesData[saleDate] = [];
+    }
+    salesData[saleDate].push(sale);
+    updateSalesTable(saleDate);
+}
+function updateSalesTable(selectedDate) {
+    const tbody = document.querySelector('#salesTable tbody');
+    tbody.innerHTML = '';
+    const dailySales = salesData[selectedDate] || [];
+    dailySales.forEach(sale => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${sale.itemName}</td>
+            <td>${sale.quantity}</td>
+            <td>${sale.price} جنيه</td>
+            <td>${sale.total} جنيه</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+       
+function saveDailySales() {
+    const saleDate = document.getElementById('saleDate').value;
+
+    if (!saleDate) {
+        alert('يرجى تحديد تاريخ لحفظ الفاتورة');
+        return;
+    }
+
+    localStorage.setItem('salesData', JSON.stringify(salesData));
+    alert(`تم حفظ الفاتورة ليوم ${saleDate}!`);
+    salesData[saleDate] = [];
+    updateSalesTable(saleDate);
+}
+
+
+function generateReport() {
+    const reportType = document.getElementById('reportType').value;
+    const reportDate = document.getElementById('reportDate').value;
+    const reportContent = document.getElementById('reportContent');
+    reportContent.innerHTML = '';
+
+    let filteredSales = [];
+    const selectedDate = new Date(reportDate);
+    const today = new Date();
+
+    if (!reportDate) {
+        reportContent.innerHTML = '<p>برجاء اختيار تاريخ التقرير.</p>';
+        return;
+    }
+
+    if (reportType === 'daily') {
+        const selectedDateStr = reportDate;
+        filteredSales = salesData[selectedDateStr] || [];
+    } else if (reportType === 'weekly') {
+        const weekStart = new Date(selectedDate);
+        weekStart.setDate(selectedDate.getDate() - selectedDate.getDay());
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+
+        Object.keys(salesData).forEach(date => {
+            const saleDate = new Date(date);
+            if (saleDate >= weekStart && saleDate <= weekEnd) {
+                filteredSales = filteredSales.concat(salesData[date]);
+            }
+        });
+    } else if (reportType === 'monthly') {
+        const selectedMonth = selectedDate.getMonth();
+        const selectedYear = selectedDate.getFullYear();
+
+        Object.keys(salesData).forEach(date => {
+            const saleDate = new Date(date);
+            if (saleDate.getMonth() === selectedMonth && saleDate.getFullYear() === selectedYear) {
+                filteredSales = filteredSales.concat(salesData[date]);
+            }
+        });
+    } else if (reportType === 'yearly') {
+        const selectedYear = selectedDate.getFullYear();
+
+        Object.keys(salesData).forEach(date => {
+            const saleDate = new Date(date);
+            if (saleDate.getFullYear() === selectedYear) {
+                filteredSales = filteredSales.concat(salesData[date]);
+            }
+        });
+    }
+
+    if (filteredSales.length === 0) {
+        reportContent.innerHTML = '<p>لا توجد مبيعات للفترة المحددة.</p>';
+        return;
+    }
+
+    let totalRevenue = 0;
+    const reportTable = document.createElement('table');
+    reportTable.innerHTML = `
+        <thead>
+            <tr>
+                <th>الصنف</th>
+                <th>الكمية</th>
+                <th>الإجمالي</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    `;
+    const tbody = reportTable.querySelector('tbody');
+
+    const itemSummary = {};
+    filteredSales.forEach(sale => {
+        if (!itemSummary[sale.itemId]) {
+            itemSummary[sale.itemId] = {
+                name: sale.itemName,
+                quantity: 0,
+                total: 0
+            };
+        }
+        itemSummary[sale.itemId].quantity += sale.quantity;
+        itemSummary[sale.itemId].total += sale.total;
+        totalRevenue += sale.total;
+    });
+
+    for (const id in itemSummary) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${itemSummary[id].name}</td>
+            <td>${itemSummary[id].quantity}</td>
+            <td>${itemSummary[id].total} جنيه</td>
+        `;
+        tbody.appendChild(tr);
+    }
+
+    reportContent.appendChild(reportTable);
+    reportContent.innerHTML += `<p>إجمالي الإيرادات: ${totalRevenue} جنيه</p>`;
+}
+
+        updateItemsList();
+        updateSalesTable();
+    </script>
+</body>
+</html>
